@@ -1,7 +1,8 @@
 module Impasse
   class Node < ActiveRecord::Base
     unloadable
-    set_table_name "impasse_nodes"
+#    set_table_name "impasse_nodes"
+    self.table_name = "impasse_nodes"
     self.include_root_in_json = false
 
     belongs_to :parent, :class_name=>'Node', :foreign_key=> :parent_id
@@ -38,13 +39,18 @@ module Impasse
     end
 
     def active?
-      !attributes['active'] or attributes['active'].to_i == 1 or attributes['active'].is_a? TrueClass or attributes['active'] == 't'
+#      !attributes['active'] or attributes['active'].to_i == 1 or attributes['active'].is_a? TrueClass or attributes['active'] == 't'
+      !attributes['active'] or attributes_boolean_to_number('active') == 1 or attributes['active'].is_a? TrueClass or attributes['active'] == 't'
     end
 
     def planned?
-      attributes['planned'].to_i == 1 or attributes['planned'].is_a? TrueClass or attributes['planned'] == 't'
+#      attributes['planned'].to_i == 1 or attributes['planned'].is_a? TrueClass or attributes['planned'] == 't'
+      attributes_boolean_to_number('planned') == 1 or attributes['planned'].is_a? TrueClass or attributes['planned'] == 't'
     end
 
+    def attributes_boolean_to_number(attribute_type)
+      attributes["#{attribute_type}"] ? 1: 0
+    end    
     def self.find_children(node_id, test_plan_id=nil, filters=nil, limit=300)
       sql = <<-'END_OF_SQL'
       SELECT node.*, tc.active
@@ -265,9 +271,10 @@ ORDER BY level, T.node_order
     end
 
     def update_siblings_order!
-      siblings = Node.find(:all,
-                           :conditions=>["parent_id=? and id != ?", self.parent_id, self.id],
-                           :order=>:node_order)
+#      siblings = Node.find(:all,
+#                           :conditions=>["parent_id=? and id != ?", self.parent_id, self.id],
+#                           :order=>:node_order)
+      siblings = Node.where(parent_id: self.parent_id, id: self.id).order(:node_order)
       if self.node_order < siblings.size
         siblings.insert(self.node_order, self)
       else
@@ -291,7 +298,8 @@ ORDER BY level, T.node_order
       WHERE path like '#{old_path}_%'
       END_OF_SQL
       
-      connection.update(sql)
+#      connection.update(sql)
+      self.class.connection.update(sql)
     end
 
     private

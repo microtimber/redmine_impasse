@@ -28,13 +28,18 @@ class ImpasseExecutionsController < ImpasseAbstractController
     status = 'success'
     errors = []
     for test_case_id in test_case_ids
-      test_plan_case = Impasse::TestPlanCase.find(:first, :conditions=>[
-                                                                        "test_plan_id=? AND test_case_id=?",
-                                                                        params[:test_plan_case][:test_plan_id],
-                                                                        test_case_id])
+#      test_plan_case = Impasse::TestPlanCase.find(:first, :conditions=>[
+#                                                                        "test_plan_id=? AND test_case_id=?",
+#                                                                        params[:test_plan_case][:test_plan_id],
+#                                                                        test_case_id])
+      test_plan_case = Impasse::TestPlanCase.where("test_plan_id=? AND test_case_id=?",
+                                                   params[:test_plan_case][:test_plan_id],
+                                                                        test_case_id).first                                                                    
       next if test_plan_case.nil?
-      execution = Impasse::Execution.find_or_initialize_by_test_plan_case_id(test_plan_case.id)
-      execution.attributes = params[:execution]
+#      execution = Impasse::Execution.find_or_initialize_by_test_plan_case_id(test_plan_case.id)
+      execution = Impasse::Execution.find_or_initialize_by(test_plan_case_id: test_plan_case.id)
+#      execution.attributes = params[:execution]
+      execution.attributes = permit_execution_params
       if params[:record]
         execution.execution_ts = Time.now.to_datetime
         execution.executor_id = User.current.id
@@ -66,8 +71,10 @@ class ImpasseExecutionsController < ImpasseAbstractController
 
     status = true
     for test_case_id in test_case_ids
-      test_plan_case = Impasse::TestPlanCase.find(:first, :conditions=>[
-                         "test_plan_id=? AND test_case_id=?", params[:test_plan_case][:test_plan_id], test_case_id])
+#      test_plan_case = Impasse::TestPlanCase.find(:first, :conditions=>[
+#                         "test_plan_id=? AND test_case_id=?", params[:test_plan_case][:test_plan_id], test_case_id])
+      test_plan_case = Impasse::TestPlanCase.where("test_plan_id=? AND test_case_id=?", 
+                                              params[:test_plan_case][:test_plan_id], test_case_id).first
       next if test_plan_case.nil?
       execution = Impasse::Execution.find_by_test_plan_case_id(test_plan_case.id)
       next if execution.nil?
@@ -103,10 +110,13 @@ END_OF_SQL
     else
       @execution = executions.first
     end
-    @execution.attributes = params[:execution]
-    @execution_histories = Impasse::ExecutionHistory.find(:all, :joins => [ :executor ],
-                                                          :conditions => ["test_plan_case_id=?", @execution.test_plan_case_id],
-                                                          :order => "execution_ts DESC")
+#    @execution.attributes = params[:execution]
+#    @execution.attributes = permit_execution_params
+#    @execution_histories = Impasse::ExecutionHistory.find(:all, :joins => [ :executor ],
+#                                                          :conditions => ["test_plan_case_id=?", @execution.test_plan_case_id],
+#                                                          :order => "execution_ts DESC")
+    @execution_histories = Impasse::ExecutionHistory.joins(:executor).where("test_plan_case_id=?", 
+                                    @execution.test_plan_case_id).order("execution_ts DESC")
     if request.post? and @execution.save
       render :json => {'status'=>true}
     else
@@ -163,5 +173,10 @@ END_OF_SQL
      "#{icon_dir}/cross.png",
      "#{icon_dir}/wall-brick.png",
     ][status.to_i]
+  end
+  
+  private
+  def permit_execution_params
+    params.require(:execution).permit(:tester_id) if params[:execution]
   end
 end

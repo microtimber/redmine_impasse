@@ -1,7 +1,8 @@
 module Impasse
   class TestSuite < ActiveRecord::Base
     unloadable
-    set_table_name "impasse_test_suites"
+#    set_table_name "impasse_test_suites"
+    self.table_name = "impasse_test_suites"
     self.include_root_in_json = false
 
     belongs_to :node, :foreign_key => :id

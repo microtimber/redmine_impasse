@@ -15,12 +15,14 @@ class ImpasseTestPlansController < ImpasseAbstractController
   end
 
   def show
-    @test_plan = Impasse::TestPlan.find(:first, :conditions => { :id => params[:id]}, :include => :version)
+#    @test_plan = Impasse::TestPlan.find(:first, :conditions => { :id => params[:id]}, :include => :version)
+    @test_plan = Impasse::TestPlan.includes(:version).find(params[:id])
     @setting = Impasse::Setting.find_by_project_id(@project) || Impasse::Setting.create(:project_id => @project.id)
   end
 
   def new
-    @test_plan = Impasse::TestPlan.new(params[:test_plan])
+    #@test_plan = Impasse::TestPlan.new(params[:test_plan])
+    @test_plan = Impasse::TestPlan.new(permit_new_params)
     if request.post? and @test_plan.save
       flash[:notice] = l(:notice_successful_create)
       redirect_to :action => :tc_assign, :project_id => @project, :id => @test_plan
@@ -100,7 +102,8 @@ class ImpasseTestPlansController < ImpasseAbstractController
   def add_test_case
     if params.include? :test_case_ids
       new_cases = 0
-      nodes = Impasse::Node.find(:all, :conditions => ["id in (?)", params[:test_case_ids]])
+#      nodes = Impasse::Node.find(:all, :conditions => ["id in (?)", params[:test_case_ids]])
+      nodes = Impasse::Node.where("id in (?)", params[:test_case_ids])
       ActiveRecord::Base.transaction do
         for node in nodes
           test_case_ids = []
@@ -112,10 +115,15 @@ class ImpasseTestPlansController < ImpasseAbstractController
 
           for test_case_id in test_case_ids
             test_plan_case =
-              Impasse::TestPlanCase.find_or_create_by_test_case_id_and_test_plan_id(
-                                                                                    :test_case_id => test_case_id,
-                                                                                    :test_plan_id => params[:test_plan_id],
-                                                                                    :node_order => 0)
+#              Impasse::TestPlanCase.find_or_create_by_test_case_id_and_test_plan_id(
+#                                                                                    :test_case_id => test_case_id,
+#                                                                                    :test_plan_id => params[:test_plan_id],
+#                                                                                    :node_order => 0)
+              Impasse::TestPlanCase.create_with(node_order: 0).find_or_create_by(
+                                                                      test_case_id: test_case_id,
+                                                                      test_plan_id: params[:test_plan_id],
+                                                                    )
+
             new_cases += 1
           end
         end
@@ -131,7 +139,13 @@ class ImpasseTestPlansController < ImpasseAbstractController
   end
 
   def autocomplete
-    @users = @project.users.like(params[:q]).all(:limit => 100)
+#    @users = @project.users.like(params[:q]).all(:limit => 100)
+    @users = @project.users.like(params[:q]).all.limit(100)
     render :layout => false
+  end
+  
+  private
+  def permit_new_params
+    params.require(:test_plan).permit(:name, :version_id, :notes) if params[:test_plan]
   end
 end

@@ -24,6 +24,18 @@
       },
       canEdit: <%= (User.current.allowed_to? :manage_testcases, nil, :global => true) ? "true" : "false" %>
     };
+    
+    $(document).ready(function() {
+      $("#principal_search").bind("keyup", function() {
+        $("principal_search").addClass("ajax-loading") 
+        var url = "<%= testplan_autocomplete_path(@project) %>"
+        $.get(url, {q: $("#principal_search").val() }, function(html) { // perform an AJAX get, the trailing function is what happens on successful get.
+          $("principal_search").removeClass("ajax-loading"); 
+          $("#principals").html(html); // replace the "results" div with the result of action taken
+        });
+      });
+    });
+    
   </script>
 <% end %>
 
@@ -46,9 +58,11 @@
 	<div id="calendar-view" style="width: 100%"></div>
       </fieldset>
       <fieldset>
-        <p><%= label_tag "principal_search", l(:label_user_search) %><%= text_field_tag 'principal_search', nil %></p>
+        <p><%= label_tag "principal_search", l(:label_user_search) %>
+            <%= text_field_tag 'principal_search', nil %>
+        </p>
 	<% if Redmine::VERSION::MAJOR < 2 or Redmine::VERSION::MINOR < 1 %>
-          <%= observe_field(:principal_search,
+          <%#= observe_field(:principal_search,
 			    :frequency => 0.5,
 			    :update => :principals,
 			    :url => { :controller => :impasse_test_plans, :action => :autocomplete, :project_id => @project },
@@ -63,9 +77,10 @@
 	<legend><%=l :label_member_plural %></legend>
 	<div id="principals">
 	  <ul>
-	    <% for user in @project.users.all(:limit => 100) %>
+	    <%# for user in @project.users.all(:limit => 100) %>
+      <% for user in @project.users.all.limit(100) %>
 	      <li class="jstree-draggable test-member" style="list-style:none; cursor: pointer" id="principal-<%=h user.id %>"><%= avatar user, :size=>16 %><%=h user %></li>
-  <% end %>
+      <% end %>
 	  </ul>
 	</div>
       </fieldset>
