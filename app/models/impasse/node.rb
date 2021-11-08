@@ -98,7 +98,10 @@ module Impasse
     end
 
     def planned?
-      attributes['planned'].is_a? TrueClass or attributes['planned'].to_i == 1 or attributes['planned'] == 't'
+      !attributes['planned'].is_a?(FalseClass) && 
+      (attributes['planned'].is_a? TrueClass || 
+        attributes['planned'].to_i == 1 || 
+        attributes['planned'] == 't')
     end
 
     def self.find_children(node_id, test_plan_id=nil, filters=nil, limit=300)
@@ -183,7 +186,7 @@ module Impasse
 
     def self.find_planned(node_id, test_plan_id=nil, filters={}, limit=300)
       sql = <<-'END_OF_SQL'
-    SELECT T.*, <%= @@length_for_sql %>(T.path) - <%= @@length_for_sql %>(REPLACE(T.path,'.','')) level, 
+    SELECT T.*, <%= @@length_for_sql %>(T.path) - <%= @@length_for_sql %>(REPLACE(T.path,'.','')) AS level, 
       E.expected_date, E.status, users.firstname, users.lastname
       FROM (
         SELECT distinct parent.*, tpc.test_plan_id
@@ -286,7 +289,7 @@ ORDER BY level, T.node_order
 
     def all_decendant_cases_with_plan
       sql = <<-'END_OF_SQL'
-      SELECT distinct parent.*, <%= @@length_for_sql %>(parent.path) - <%= @@length_for_sql %>(REPLACE(parent.path,'.','')) level,
+      SELECT distinct parent.*, <%= @@length_for_sql %>(parent.path) - <%= @@length_for_sql %>(REPLACE(parent.path,'.','')) AS level,
              tc.active, 
              <%= @@exists_for_sql_initial %>
                 SELECT * FROM impasse_test_plan_cases AS tpc WHERE tpc.test_case_id = parent.id

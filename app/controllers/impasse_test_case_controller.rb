@@ -147,7 +147,7 @@ class ImpasseTestCaseController < ImpasseAbstractController
             @test_steps = node_params[:test_steps].collect{|i, ts| Impasse::TestStep.new(ts) }
             @test_steps.each{|ts| raise ActiveRecord::RecordInvalid.new(ts) unless ts.valid? }
             @test_case.test_steps.replace(@test_steps)
-            tmp.clear
+            # tmp.clear
             #</sorting test steps>
             #---------------------------------------------------------------------
           end

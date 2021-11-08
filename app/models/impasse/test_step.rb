@@ -3,6 +3,7 @@ module Impasse
     unloadable
     self.table_name = "impasse_test_steps"
 
+    default_scope {order('step_number ASC')}
     #attr_accessor :actions, :step_number, :expected_results
 
     belongs_to :test_case
